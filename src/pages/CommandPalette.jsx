@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 
-export default function CommandPalette({ isOpen, onClose, onExecuteCommand, commands }) {
+export default function CommandPalette({ isOpen, onClose, onExecuteCommand, commands = [] }) {
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
