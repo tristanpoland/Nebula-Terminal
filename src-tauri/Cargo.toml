@@ -1,11 +1,11 @@
 [package]
-name = "app"
+name = "nebula-terminal"
 version = "0.1.0"
-description = "A Tauri App"
+description = "A Tauri-Based cross-platform terminal"
 authors = ["you"]
 license = ""
 repository = ""
-default-run = "app"
+default-run = "nebula-terminal"
 edition = "2021"
 rust-version = "1.66"
 

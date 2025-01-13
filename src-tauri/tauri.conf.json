@@ -7,7 +7,7 @@
     "distDir": "../out"
   },
   "package": {
-    "productName": "pulsar-engine",
+    "productName": "nebula-terminal",
     "version": "0.1.0"
   },
   "tauri": {
