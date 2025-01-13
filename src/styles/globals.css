@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 html {
-  background-color: transparent;
+  background-color: 00000000;
+  border-radius: 10px;
 }
 
 body {

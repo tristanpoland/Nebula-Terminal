@@ -24,11 +24,9 @@ const TerminalInner = dynamic(() => Promise.resolve(() => {
         fontSize: 14,
         fontFamily: 'Consolas, monospace',
         theme: {
-          background: '#000000',
+          background: '#00000000',
           foreground: '#ffffff'
         },
-        cols: 80,
-        rows: 24
       });
 
       const fitAddon = new FitAddon();
