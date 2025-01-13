@@ -48,11 +48,11 @@ export default function TabbedTerminal() {
   const handleClose = () => console.log('Close');
 
   return (
-    <div className={`flex flex-col h-screen bg-black/70 text-white ${isMaximized ? '' : 'rounded-lg'} overflow-hidden`}>
-      {/* Titlebar */}
-      <div className="flex items-center justify-between h-8 select-none data-tauri-drag-region">
+  <div className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl text-white ${isMaximized ? '' : 'rounded-lg'} overflow-hidden`}>
+  {/* Titlebar */}
+      <div className="flex items-center justify-between h-8 select-none" data-tauri-drag-region>
         <div className="flex items-center px-4">
-          <span className="text-sm">Terminal</span>
+          <span className="text-sm">Nebula</span>
         </div>
         <div className="flex">
           <button

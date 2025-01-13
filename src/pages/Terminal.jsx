@@ -1,92 +1,124 @@
-// TerminalInner.jsx
 import React, { useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
 
-let XTerm, FitAddon;
-if (typeof window !== 'undefined') {
-  XTerm = require('xterm').Terminal;
-  FitAddon = require('xterm-addon-fit').FitAddon;
-  require('xterm/css/xterm.css');
-}
-
-export default function TerminalInner() {
+// Create a client-side only terminal component
+const TerminalInner = dynamic(() => Promise.resolve(() => {
   const terminalRef = useRef(null);
   const xtermRef = useRef(null);
   const fitAddonRef = useRef(null);
 
   useEffect(() => {
-    // Initialize xterm.js
-    xtermRef.current = new XTerm({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: 'Consolas, monospace',
-      theme: {
-        background: '#000000',
-        foreground: '#ffffff'
-      },
-      cols: 80,  // Set initial dimensions
-      rows: 24,
-      dimensions: {
-        width: 80,
-        height: 24
-      }
-    });
+    // Dynamically import xterm only on client side
+    const initializeTerminal = async () => {
+      const { Terminal } = await import('xterm');
+      const { FitAddon } = await import('xterm-addon-fit');
+      await import('xterm/css/xterm.css');
 
-    fitAddonRef.current = new FitAddon();
-    xtermRef.current.loadAddon(fitAddonRef.current);
+      if (!terminalRef.current) return;
 
-    // Open terminal in the container
-    xtermRef.current.open(terminalRef.current);
-    
-    // Do an initial fit
-    setTimeout(() => {
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-        const { rows, cols } = xtermRef.current;
-        invoke('resize_pty', { rows, cols }).catch(console.error);
-      }
-    }, 100);
+      // Initialize xterm.js
+      const terminal = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: 'Consolas, monospace',
+        theme: {
+          background: '#000000',
+          foreground: '#ffffff'
+        },
+        cols: 80,
+        rows: 24
+      });
 
-    // Initialize PTY
-    invoke('create_pty').catch(console.error);
+      const fitAddon = new FitAddon();
+      terminal.loadAddon(fitAddon);
 
-    // Listen for PTY output
-    const unsubscribe = listen('pty-output', (event) => {
-      if (xtermRef.current) {
-        xtermRef.current.write(event.payload);
-      }
-    });
+      // Store refs
+      xtermRef.current = terminal;
+      fitAddonRef.current = fitAddon;
 
-    // Handle input
-    xtermRef.current.onData(data => {
-      invoke('write_to_pty', { input: data }).catch(console.error);
-    });
+      // Open terminal
+      terminal.open(terminalRef.current);
 
-    // Handle resize
-    const resizeObserver = new ResizeObserver(() => {
-      if (fitAddonRef.current && xtermRef.current) {
-        fitAddonRef.current.fit();
-        const { rows, cols } = xtermRef.current;
-        invoke('resize_pty', { rows, cols }).catch(console.error);
-      }
-    });
+      // Initial fit
+      setTimeout(() => {
+        if (fitAddon) {
+          try {
+            fitAddon.fit();
+            const { rows, cols } = terminal;
+            invoke('resize_pty', { rows, cols }).catch(console.error);
+          } catch (error) {
+            console.error('Fit error:', error);
+          }
+        }
+      }, 100);
 
-    resizeObserver.observe(terminalRef.current);
+      // Initialize PTY
+      invoke('create_pty').catch(console.error);
 
-    // Cleanup
-    return () => {
-      unsubscribe.then(fn => fn());
-      resizeObserver.disconnect();
-      if (xtermRef.current) {
-        xtermRef.current.dispose();
-      }
+      // Listen for PTY output
+      const unsubscribe = await listen('pty-output', (event) => {
+        if (terminal.element) {
+          terminal.write(event.payload);
+        }
+      });
+
+      // Handle input
+      terminal.onData(data => {
+        invoke('write_to_pty', { input: data }).catch(console.error);
+      });
+
+      // Handle resize
+      let resizeTimeout;
+      const resizeObserver = new ResizeObserver(() => {
+        if (resizeTimeout) {
+          clearTimeout(resizeTimeout);
+        }
+        
+        resizeTimeout = setTimeout(() => {
+          if (fitAddon && terminal.element) {
+            try {
+              fitAddon.fit();
+              const { rows, cols } = terminal;
+              invoke('resize_pty', { rows, cols }).catch(console.error);
+            } catch (error) {
+              console.error('Resize error:', error);
+            }
+          }
+        }, 100);
+      });
+
+      resizeObserver.observe(terminalRef.current);
+
+      // Cleanup
+      return () => {
+        if (resizeTimeout) {
+          clearTimeout(resizeTimeout);
+        }
+        unsubscribe.then(fn => fn());
+        resizeObserver.disconnect();
+        if (terminal) {
+          terminal.dispose();
+        }
+      };
     };
+
+    initializeTerminal().catch(console.error);
   }, []);
 
   return (
-    <div className="h-full w-full">
-      <div ref={terminalRef} className="h-full" style={{ padding: '12px' }} />
+    <div className="h-full w-full" style={{ minHeight: '400px', position: 'relative' }}>
+      <div 
+        ref={terminalRef} 
+        className="h-full w-full absolute inset-0" 
+        style={{ padding: '12px' }} 
+      />
     </div>
   );
-}
+}), {
+  ssr: false // This is crucial - it prevents server-side rendering
+});
+
+// Export the dynamic component
+export default TerminalInner;
